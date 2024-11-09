@@ -298,22 +298,34 @@ class DPT_DINOv2(nn.Module):
         return features,decoder_features_1,decoder_features_2,decoder_features_3,decoder_features_4
 
 
-class DepthAnything(DPT_DINOv2, PyTorchModelHubMixin):
-    def __init__(self, config):
-        super().__init__(**config)
+class DepthAnything(DPT_DINOv2):
+    def __init__(self, nclass, encoder='vitl', **kwargs):
+        super().__init__(encoder=encoder, **kwargs)
 
+def main():
+    # Model config (remove encoder here, as it's already passed explicitly)
+    config = {
+        "features": 256,
+        "out_channels": [256, 512, 1024, 1024],
+        "use_bn": False,
+        "use_clstoken": False,
+    }
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--encoder",
-        default="vits",
-        type=str,
-        choices=["vits", "vitb", "vitl"],
-    )
-    args = parser.parse_args()
-    
-    model = DepthAnything.from_pretrained("LiheYoung/depth_anything_{:}14".format(args.encoder))
-    
-    print(model)
-    
+    # Instantiate model (DepthAnything 类会传入 nclass 和 encoder 参数)
+    model = DepthAnything(nclass=1, encoder="vitl", **config)
+
+    # Example input
+    x = torch.randn(1, 3, 224, 224)  # Batch size 1, 3 channels, 224x224 resolution
+
+    # Forward pass
+    dpt_features, fusion_features_1, fusion_features_2, fusion_features_3, fusion_features_4 = model(x)
+
+    # Print results
+    #print(f1.shape)
+    print(f"Fusion Features 1: {fusion_features_1.shape}")
+    print(f"Fusion Features 2: {fusion_features_2.shape}")
+    print(f"Fusion Features 3: {fusion_features_3.shape}")
+    print(f"Fusion Features 4: {fusion_features_4.shape}")
+
+if __name__ == "__main__":
+    main()
