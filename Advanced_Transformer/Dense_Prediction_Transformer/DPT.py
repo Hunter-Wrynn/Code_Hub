@@ -280,7 +280,8 @@ class DPT_DINOv2(nn.Module):
             self.pretrained = torch.hub.load('facebookresearch/dinov2', 'dinov2_{:}14'.format(encoder))
         
         dim = self.pretrained.blocks[0].attn.qkv.in_features
-        
+        self.dim=dim
+        #print(dim)
         self.depth_head = DPTHead(1, dim, features, use_bn, out_channels=out_channels, use_clstoken=use_clstoken)
         
     def forward(self, x):
@@ -295,7 +296,7 @@ class DPT_DINOv2(nn.Module):
         #depth = F.interpolate(depth, size=(h, w), mode="bilinear", align_corners=True)
         #depth = F.relu(depth)
 
-        return features,decoder_features_1,decoder_features_2,decoder_features_3,decoder_features_4
+        return features,decoder_features_1,decoder_features_2,decoder_features_3,decoder_features_4,self.dim
 
 
 class DepthAnything(DPT_DINOv2):
@@ -318,10 +319,11 @@ def main():
     x = torch.randn(1, 3, 224, 224)  # Batch size 1, 3 channels, 224x224 resolution
 
     # Forward pass
-    dpt_features, fusion_features_1, fusion_features_2, fusion_features_3, fusion_features_4 = model(x)
+    dpt_features, fusion_features_1, fusion_features_2, fusion_features_3, fusion_features_4,dim = model(x)
 
     # Print results
     #print(f1.shape)
+    print(dim)
     print(f"Fusion Features 1: {fusion_features_1.shape}")
     print(f"Fusion Features 2: {fusion_features_2.shape}")
     print(f"Fusion Features 3: {fusion_features_3.shape}")

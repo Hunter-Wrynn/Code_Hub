@@ -42,6 +42,7 @@ def bfs(start):
 
     print("No solution found.")
 
+# 打印便利路径
 def bfs_visit(start):
     start_pos = start.index(0)
     

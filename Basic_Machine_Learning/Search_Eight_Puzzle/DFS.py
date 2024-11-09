@@ -1,6 +1,6 @@
 from collections import deque
 
-DIRECTIONS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+DIRECTIONS = [ (1, 0), (0, -1), (0, 1),(-1, 0)]
 DIR_STRINGS = ['U', 'D', 'L', 'R']
 
 def is_goal(state):
