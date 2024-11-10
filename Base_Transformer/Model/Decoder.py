@@ -6,12 +6,12 @@ import torch
 import torch.nn as nn
 import torch
 import math
-from .FFN import PositinalWiseFeedForward
-from .Layer_Norm import LayerNorm
-from .Multihead_Attention import MultiheadAttention
-from .Positional_Embedding import PositionalEmbedding
-from .Token_Embedding import TokenEmbedding
-from .Transformer_Embedding import TransformerEmbedding
+from ..Layers.FFN import PositinalWiseFeedForward
+from ..Layers.Layer_Norm import LayerNorm
+from ..Layers.Multihead_Attention import MultiheadAttention
+from ..Layers.Positional_Embedding import PositionalEmbedding
+from ..Layers.Token_Embedding import TokenEmbedding
+from ..Layers.Transformer_Embedding import TransformerEmbedding
 
 
 class DecoderLayer(nn.Module):
