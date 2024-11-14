@@ -1,3 +1,6 @@
+import torch 
+import torch.nn as nn
+from torch.autograd import Variable
 
 def _init_vit_weights(m):
     """

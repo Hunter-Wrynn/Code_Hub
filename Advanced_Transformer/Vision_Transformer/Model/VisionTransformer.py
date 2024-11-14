@@ -10,7 +10,7 @@ from ..Layers.Attention import Attention
 from ..Layers.DropPath import DropPath
 from ..Layers.MLP import Mlp
 
-from utils import *
+from utils import _init_vit_weights
 
 class VisionTransformer(nn.Module):
     def __init__(self,
@@ -108,3 +108,34 @@ class VisionTransformer(nn.Module):
 
         nn.init.trunc_normal_(self.cls_token, std=0.02)
         self.apply(_init_vit_weights)
+    
+    def forward_features(self,x):
+        # [B, C, H, W] -> [B, num_patches, embed_dim]
+        x=self.patch_embed(x) # [B, 196, 768]
+        # [1, 1, 768] -> [B, 1, 768]
+        cls_token=self.cls_token.expand(x.shape[0],-1,-1)
+        if self.dist_token is not None:
+            x=torch.cat((cls_token,x),dim=1)
+        else:
+            x = torch.cat((cls_token, self.dist_token.expand(x.shape[0], -1, -1), x), dim=1)
+        
+        x=self.pos_drop(x+self.pos_embed)
+        x=self.block(x)
+        x=self.norm(x)
+        if self.dist_token is None:
+            return self.pre_logits(x[:, 0])
+        else:
+            return x[:, 0], x[:, 1]
+    
+    def forward(self,x):
+        x = self.forward_features(x)
+        if self.head_dist is not None:
+            x, x_dist = self.head(x[0]), self.head_dist(x[1])
+            if self.training and not torch.jit.is_scripting():
+                # during inference, return the average of both classifier predictions
+                return x, x_dist
+            else:
+                return (x + x_dist) / 2
+        else:
+            x = self.head(x)
+        return x
