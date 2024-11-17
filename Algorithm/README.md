@@ -12,5 +12,6 @@ This repository is organized into three main folders:
 ---
 
 ## Problem 1: leetcode 386. DFS, Trie
+## Problem 1: leetcode 17. Hash Table, String, and Backtracking
 
 
