@@ -14,9 +14,6 @@
 
   Algorithm patterns and my coding blog
 
-- **Machine Learning**
-
-  Code implementation for machine learning algorithms
 
 - **DeepSpeed**
 
@@ -25,6 +22,10 @@
 - **Fine-Tuning**
 
   Notes on model fine-tuning
+
+- **Machine Learning**
+
+  Code implementation for machine learning algorithms
 
 - **Ongoing**
 
