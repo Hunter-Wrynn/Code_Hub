@@ -13,6 +13,7 @@ class SimpleNet(nn.Module):
         self.fc1 = torch.nn.Linear(input_dim, hidden_dim)
         self.fc2 = torch.nn.Linear(hidden_dim, output_dim)
 
+    
     def forward(self, x):
         x = self.fc1(x)
         x = torch.relu(x)
@@ -44,7 +45,6 @@ if __name__ == "__main__":
 
 
     deepspeed.init_distributed()
-
 
     for epoch in range(1000):
         model.train()
