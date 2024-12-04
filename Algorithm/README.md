@@ -20,6 +20,7 @@ This repository is organized into three main folders:
 - **Problem 4**: lanqiao 178. Graph Color, DFS
 - **Problem 5**: lanqiao 2942. Pruning, DFS
 - **Problem 6**: lanqiao 3008. Pruning, DFS
+- **Problem 7**: lanqiao 3075. Pruning, DFS
 
 ## Daily_Practice 
 
