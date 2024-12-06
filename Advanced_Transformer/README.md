@@ -28,6 +28,9 @@ This directory contains implementations and notes on advanced transformer archit
   Implementation of Vision Transformer (ViT) for image classification and other vision-related tasks.  
   **Paper:** [An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/abs/2010.11929)
 
+  - **Diffusion Transformer**  
+  Implementation of Diffusion Transformer (DiT).  
+
 ## Usage
 
 Each folder contains:
