@@ -22,7 +22,7 @@ class SinusoidalPosEmb(nn.Module):
         device=x.device
         
 class MLP(nn.Module):
-    def __init__(self,state_dim,action_dim,hidden_dim,device,t_dim):
+    def __init__(self,state_dim,action_dim,hidden_dim,device,t_dim=16):
         super(MLP,self).__init__()
         
         self.a_dim=action_dim
@@ -83,6 +83,12 @@ Losses= {
     'l1':WeightedL1,
     'l2':WeightedL2,
 }       
+
+def extract(a,t,x_shape):
+    b,*_=t.shape
+    out=a.gather(-1,t)
+    return out.reshape(b,*((1,)*(len(x_shape)-1)))
+
 class Diffusion(nn.Module):
     def __init__(self,
                  loss_type,
@@ -96,6 +102,7 @@ class Diffusion(nn.Module):
         self.hidden_dim=kwargs["hidden_dim"]
         self.T=kwargs["T"]
         self.device=torch.device(kwargs["device"])
+        self.model =MLP(self.state_dim,self.action_dim,self.hidden_dim,self.device)
         
         if beta_schedule == "linear":
             betas=torch.linspace(0.0001,0.02,self.T,dtype=torch.float32,device=self.device)
@@ -127,5 +134,57 @@ class Diffusion(nn.Module):
         self.register_buffer("posterior_mean_coef2", (1.0 - alphas_cumprod_prev) * torch.sqrt(alphas) / (1.0 - alphas_cumprod))
         
         self.loss_fn=Losses[loss_type]()
+    
+    
+    def q_posterior(self, x_start, x, t):
+        posterior_mean = (
+            extract(self.posterior_mean_coef1, t, x.shape) * x_start
+            + extract(self.posterior_mean_coef2, t, x.shape) * x
+        )
+        posterior_variance = extract(self.posterior_variance, t, x.shape)
+        posterior_log_variance = extract(
+            self.posterior_log_variance_clipped, t, x.shape
+        )
+        return posterior_mean, posterior_variance, posterior_log_variance
+
+    def predict_start_from_noise(self, x, t, pred_noise):
+        return (
+            extract(self.sqrt_recip_alphas_cumprod, t, x.shape) * x
+            - extract(self.sqrt_recipm_alphas_cumprod, t, x.shape) * pred_noise
+        )
+    
+    def p_mean_variance(self,x,t,s):
+        pred_noise=self.model
+        x_recon=self.predict_start_from_noise(x,t,pred_noise)
+        x_recon.champ_(-1,1)
+        model_mean,posterior_variance,posterior_log_variance=self.q_posterior(x_recon,x,t)
+        return model_mean,posterior_log_variance
+    def p_sample(self,x,t,s):
+        model_mean,model_log_variance=self.p_mean_variance(x,t,s)
+        noise=torch.randn_like(x)
         
+        nonzero_mask=(1-(t==0).float()).reshape(b,*((1,)*(len(x.shape)-1)))   
+        return model_mean+ nonzero_mask * (0.5 * model_log_variance).exp() * noise
+             
+    def p_sample_loop(self,state,shape,*agrs,**kwargs):
+        device=self.device
+        batch_size=state.shape[0]
+        x=torch.randn(shape,device=device,requires_grad=False)
         
+        for i in reversed(range(0,self.T)):
+            t = torch.full((batch_size,), i, device=device, dtype=torch.long)
+            x.self.p_sample(x,t,state)
+            
+        return x
+        
+    def sample(self,state,*args,**kwargs):
+        """
+        state : [batch_size,state_dim]
+        """
+        batch_size=state.shape[0]
+        shape = [batch_size,self.action_dim]
+        action=self.p_sample_loop(state,shape,*args,**kwargs)
+        return action.clamp_(-1,1)
+     
+    def forward(self, state, *args, **kwargs):
+        return self.sample(state,*args,**kwargs)
