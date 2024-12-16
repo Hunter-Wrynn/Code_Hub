@@ -21,6 +21,7 @@ This repository is organized into three main folders:
 - **Problem 5**: lanqiao 2942. Pruning, DFS
 - **Problem 6**: lanqiao 3008. Pruning, DFS
 - **Problem 7**: lanqiao 3075. Pruning, DFS
+- **Problem 8**: lanqiao 3935. DFS
 
 ## Daily_Practice 
 
