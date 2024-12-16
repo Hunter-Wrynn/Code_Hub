@@ -22,6 +22,7 @@ This repository is organized into three main folders:
 - **Problem 6**: lanqiao 3008. Pruning, DFS
 - **Problem 7**: lanqiao 3075. Pruning, DFS
 - **Problem 8**: lanqiao 3935. DFS
+- **Problem 9**: https://www.lanqiao.cn/courses/21968/learning/?id=1623065&compatibility=false. DFS, Graph Coloring
 
 ## Daily_Practice 
 
