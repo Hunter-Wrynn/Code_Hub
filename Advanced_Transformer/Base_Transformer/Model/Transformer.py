@@ -26,7 +26,7 @@ class Transformer(nn.Module):
         q=q.ne(pad_idx_q).unsqueeze(1).unsqueeze(3)
         q=q.repeat(1,1,1,len_k)
 
-        k=k.ne(pad_idx_k).unsqueeze(1).unsqueeze(3)
+        k=k.ne(pad_idx_k).unsqueeze(1).unsqueeze(2)
         k=k.repeat(1,1,len_q,1)
 
         mask=q&k
