@@ -1,3 +1,11 @@
+from ..Sparse_MOE.Sparse_MOE import SparseMOE
+from ..Sparse_MOE.Sparse_MOE import MOEConfig
+from ..Basic_MOE.Basic_MOE import BasicExpert
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
 class ShareExpertMOE(nn.Module):
     def __init__(self, config):
         super().__init__()
