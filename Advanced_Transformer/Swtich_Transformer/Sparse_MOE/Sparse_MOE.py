@@ -1,60 +1,101 @@
 # 和basic的区别是，MOE选择topK个专家，对topK个专家的输出加权求和，并且把输入样本变成了大模型的真实的输入
 # shape(batch, seq_len, hidden_dim)
-from ..Basic_MOE.Basic_MOE import BasicExpert
-from ..Basic_MOE.Basic_MOE import BasicMOE
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class MOEConfig:
-    def __init__(self,
-                 hidden_dim,
-                 expert_number,
-                 top_k,
-                 shared_experts_number=2
-            ):
-        self.hidden_dim=hidden_dim
-        self.expert_number=expert_number
-        self.top_k=top_k
-        self.shared_experts_number=shared_experts_number
-
-class MOERouter(nn.Module):
-    def __init__(self,config):
+class BasicExpert(nn.Module):
+    def __init__(self,feature_in,feature_out):
         super().__init__()
-        self.gate=nn.Linear(config.hidden_dim,config.expert_number)
-        # 但是后面只会选top_K个专家
+        self.fc=nn.Linear(feature_in,feature_out)
         
-        self.expert_number=config.expert_number
-        self.top_k=config.top_k
+    def forward(self,x):
+        return self.fc(x)
+
+class BasicMOE(nn.Module):
+    def __init__(self,feature_in,feature_out,num_experts):
+        super().__init__()
+        self.gate=nn.Linear(feature_in,num_experts)
+        
+        self.experts=nn.ModuleList(
+            BasicExpert(
+                feature_in,feature_out
+            ) for _ in range (num_experts)
+        )
     
     def forward(self,x):
-        router_logits=self.gate(x) # shape (batch*seq_len,expert_number)
         
-        router_probs=F.softmax(router_logits,dim=1,dtype=torch.float)
-        router_weights, selected_expert_indices= torch.topk(
-            router_probs,
-            self.top_k,
+        expert_weight=self.gate(x)
+        expert_out_list= [
+            expert(x) for expert in self.experts
+        ]
+        
+        expert_outputs= [
+            expert_out.unsqueeze(1)
+            for expert_out in expert_out_list
+        ]
+        # (b,1,f_o)
+        expert_output = torch.cat(
+            expert_outputs,
             dim=1
         )
+        # (b,num,f_o)
+        expert_weights = F.softmax(expert_weight,dim=1)
         
-        router_weights =router_weights/router_weights.sum(
-            dim=-1,
-            keepdim=True
-        )
-        router_weights=router_weights.to(x.dtype)
+        expert_weights = expert_weights.unsqueeze(1)
+        # (b,1,f_o)
+        output = expert_weights @ expert_output
+        return output.squeeze(1)
+
+
+
+# 主要参考自 mistral MOE 的实现
+
+class MOERouter(nn.Module):
+    def __init__(self, hidden_dim, expert_number, top_k):
+        super().__init__()
+        self.gate = nn.Linear(hidden_dim, expert_number)
+        self.expert_number = expert_number
+        self.top_k = top_k
+    
+    def forward(self, hidden_states):
+        # 计算路由logits
+        router_logits = self.gate(hidden_states)  # shape is (b * s, expert_number)
         
-        expert_mask=F.one_hot(
-            selected_expert_indices,
+        # 计算专家经过softmax之后的概率
+        routing_probs = F.softmax(router_logits, dim=-1, dtype=torch.float)
+        
+        # 计算topk的专家的输出
+        router_weights, selected_experts = torch.topk(
+            routing_probs, self.top_k, dim=-1
+        )  # shape都是 (b * s, top_k)
+        
+        # 专家权重归一化
+        router_weights = router_weights / router_weights.sum(dim=-1, keepdim=True)
+        router_weights = router_weights.to(hidden_states.dtype)
+        
+        # 生成专家掩码
+        expert_mask = F.one_hot(
+            selected_experts,
             num_classes=self.expert_number
-        ) # shape (b*s, top_k, expert_number)
+        )  # shape是 (b * s, top_k, expert_number)
+        expert_mask = expert_mask.permute(2, 1, 0)  # (expert_number, top_k, b * s)
         
-        expert_mask =expert_mask.permute(2,1,0)
-        
-        return router_logits, router_weights, selected_expert_indices, expert_mask
-        # router_logits (b*s, num)
-        # (b*s, topk)
-        # (b*s, topk)
-        # (num, topk, b*s)
+        return router_logits, router_weights, selected_experts, expert_mask
+
+
+class MOEConfig:
+    def __init__(
+            self, 
+            hidden_dim, 
+            expert_number, 
+            top_k, 
+            shared_experts_number=2,
+        ):
+        self.hidden_dim = hidden_dim
+        self.expert_number = expert_number
+        self.top_k = top_k
+        self.shared_experts_number = shared_experts_number
 
 class SparseMOE(nn.Module):
     # 稀疏 MOE 模型，这里每一个 token 都会过 topk 个专家，得到对应token 的 hidden_embeddings
@@ -135,6 +176,3 @@ def test_token_level_moe():
 
 
 test_token_level_moe()
-        
-        
-                
