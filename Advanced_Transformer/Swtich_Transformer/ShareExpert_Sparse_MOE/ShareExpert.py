@@ -1,6 +1,6 @@
 from ..Sparse_MOE.Sparse_MOE import SparseMOE
 from ..Sparse_MOE.Sparse_MOE import MOEConfig
-from ..Basic_MOE.Basic_MOE import BasicExpert
+from ..Basic_MOE.BasicMOE import BasicExpert
 
 import torch
 import torch.nn as nn
