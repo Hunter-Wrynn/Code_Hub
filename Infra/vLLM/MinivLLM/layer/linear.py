@@ -107,3 +107,42 @@ class ColumnParallelLinear(LinearBase):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return nn.functional.linear(x, self.weight, self.bias)
+
+# an extension of ColumnParallelLinear by merging several matrices
+class MergedColumnParallelLinear(ColumnParallelLinear):
+    def __init__(
+        self, 
+        input_size: int, 
+        output_sizes: list[int], # e.g. merge QKV matrices to compute MM together and then split
+        bias: bool = True,
+    ):
+        self.output_sizes = output_sizes
+        super().__init__(input_size, sum(output_sizes), bias)
+
+    # param: parameter to be reloaded after tensor parallelism
+    # loaded_weights: the original full parameter to be loaded into param
+    # the index of merged matrices (e.g. it's 0 for Q, 1 for K, 2 for V assuming QKV are merged together)
+    def weight_loader(self, param: nn.Parameter, loaded_weights: torch.Tensor, loaded_weight_id: int):
+        """
+        checkpoint = {
+            'q_proj.weight': torch.randn(4096, 4096),  
+            'k_proj.weight': torch.randn(4096, 4096),
+            'v_proj.weight': torch.randn(4096, 4096),
+        }
+        load to 
+        merged_layer = Linear(
+            input_size=4096,
+            output_sizes=sum([4096, 4096, 4096]),  # Q, K, V
+        ) which is also sharded by tp_size
+        """
+        param_data = param.data
+        # compute offset 
+        offset = sum(self.output_sizes[:loaded_weight_id]) // self.tp_size
+        # compute size
+        shard_size = self.output_sizes[loaded_weight_id] // self.tp_size
+        # find the correct slice to be loaded in the sharded parameter
+        param_data = param_data.narrow(0, offset, shard_size)
+        # shard the original full weight
+        loaded_weights_start_index = self.tp_rank * shard_size
+        shared_weights = loaded_weights.narrow(0, loaded_weights_start_index, shard_size)
+        param_data.copy_(shared_weights)
